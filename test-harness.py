@@ -3,8 +3,25 @@ import shutil
 import subprocess
 import argparse
 from pathlib import Path
+import random
 
 MAIN_BRANCH = "main"
+
+
+
+ADJECTIVES = [
+    "silent", "brave", "tasty", "angry", "fuzzy", "stormy", "clever",
+    "bouncy", "mellow", "sneaky", "heavy", "curious", "zesty", "sleepy",
+]
+
+NOUNS = [
+    "tiger", "tulip", "banana", "tarmac", "octopus", "nebula", "cascade",
+    "kangaroo", "biscuit", "python", "falcon", "avocado", "glacier"
+]
+
+def random_case_name():
+    return f"{random.choice(ADJECTIVES)}{random.choice(NOUNS)}"
+
 
 def run(cmd, cwd=None, check=True):
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, shell=True)
@@ -76,6 +93,9 @@ def create_pull_request(repo_path, test_name):
 def setup(args):
     repo_path = Path(args.path).resolve()
     print(f"🔍 Using repo path: {repo_path}")
+    test_name = args.case or random_case_name()
+    print(f"🎯 Using test case: {test_name}")
+
 
     if not args.existing:
         if repo_path.exists():
@@ -109,7 +129,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test harness for merge conflict cases")
     parser.add_argument("--existing", action="store_true", help="Use existing git repo")
     parser.add_argument("--path", type=str, default="merge-conflict-test-repo", help="Target repo directory")
-    parser.add_argument("--case", type=str, default="conflict1", help="Test case name")
+    parser.add_argument("--case", type=str, default=None, help="Test case name (auto-generated if omitted)")
     parser.add_argument("--push", action="store_true", help="Push branches to GitHub")
     parser.add_argument("--create-pr", action="store_true", help="Create a pull request for branch2")
     parser.add_argument("--auto-merge", action="store_true", help="Merge branch1 into main to trigger conflict")
