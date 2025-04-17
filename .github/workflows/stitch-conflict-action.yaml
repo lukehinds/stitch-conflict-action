@@ -1,17 +1,23 @@
 name: Auto Resolve Merge Conflicts with AI
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to resolve'
+        required: false
+        type: number
+
+  schedule:
+    - cron: '0 * * * *'
 
 jobs:
   auto-resolve-conflicts:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
           fetch-depth: 0
           fetch-tags: false
           persist-credentials: true
@@ -26,13 +32,11 @@ jobs:
 
       - name: Debug Info
         run: |
-          echo "Base: ${{ github.base_ref }}"
-          echo "Head: ${{ github.head_ref }}"
-          echo "PR: ${{ github.event.pull_request.number }}"
+          echo "Manual PR input: ${{ inputs.pr_number }}"
 
       - name: Run resolver
         run: python resolve_conflicts/main.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ inputs.pr_number }}

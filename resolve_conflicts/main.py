@@ -31,50 +31,30 @@ def manage_conflict_label(repo, pr_number, add=True):
         pr.remove_from_labels(label_name)
         print(f"✅ Removed label `{label_name}`")
 
+
 def main():
     github_token = os.getenv("GITHUB_TOKEN")
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
-    pr_number = int(os.getenv("PR_NUMBER"))
+    pr_number = os.getenv("PR_NUMBER")
 
     g = Github(github_token)
     repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
 
-    # 🧪 Attempt to merge origin/main into this branch
-    # Simulate what GitHub does: try merging origin/main
-    print("🔁 Merging origin/main into PR branch to check for conflicts...")
-    run_shell(["git", "fetch", "origin", "main"])
-    try:
-        run_shell(["git", "merge", "--no-commit", "--no-ff", "origin/main"])
-    except subprocess.CalledProcessError:
-        print("⚠️ Merge failed due to conflicts (expected if conflicting).")
+    if pr_number:
+        # Single PR mode (manual)
+        prs = [repo.get_pull(int(pr_number))]
+    else:
+        # Scheduled sweep mode
+        print("🔍 Scanning for conflicted PRs...")
+        prs = [
+            pr for pr in repo.get_pulls(state="open")
+            if pr.mergeable_state == "dirty"
+        ]
 
-    # Check for conflicted files
-    conflicted = run_shell(["git", "diff", "--name-only", "--diff-filter=U"]).splitlines()
-
-    if not conflicted:
-        print("✅ No merge conflicts.")
-        run_shell(["git", "merge", "--abort"])
-        manage_conflict_label(repo, pr_number, add=False)
-        return
-
-    print(f"🛠 Merge conflicts detected in: {conflicted}")
-    manage_conflict_label(repo, pr_number, add=True)
-
-    # Extract and send to AI
-    conflict_content = find_conflicts(conflicted)
-    resolved_files = send_to_ai(conflict_content, openrouter_key)
-    apply_fixes(resolved_files)
-
-    # Commit + push
-    run_shell(["git", "config", "user.name", "github-actions"])
-    run_shell(["git", "config", "user.email", "github-actions@github.com"])
-    run_shell(["git", "add", "."])
-    run_shell(["git", "commit", "-m", "🤖 Resolved merge conflicts with AI"])
-    run_shell(["git", "push"])
-
-    # Clean up label
-    manage_conflict_label(repo, pr_number, add=False)
-
-
-if __name__ == "__main__":
-    main()
+    for pr in prs:
+        print(f"⚙️ Attempting to resolve PR #{pr.number} ({pr.title})")
+        os.environ["PR_NUMBER"] = str(pr.number)
+        try:
+            resolve_pr_conflicts(repo, pr.number, openrouter_key)
+        except Exception as e:
+            print(f"❌ Failed to resolve PR #{pr.number}: {e}")
