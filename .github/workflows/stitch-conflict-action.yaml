@@ -19,9 +19,12 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: pip install -e .
+
       - name: Run resolver
-        uses: ./  # This references action.yml
+        run: python resolve_conflicts/main.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        #   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
