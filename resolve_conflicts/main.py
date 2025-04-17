@@ -41,20 +41,17 @@ def main():
     repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
 
     if pr_number:
-        # Single PR mode (manual)
-        prs = [repo.get_pull(int(pr_number))]
+        pr = repo.get_pull(int(pr_number))
+        resolve_pr_conflicts(repo, pr.number, openrouter_key)
     else:
-        # Scheduled sweep mode
-        print("🔍 Scanning for conflicted PRs...")
-        prs = [
+        print("🧹 No PR number provided — scanning for conflicted PRs...")
+        conflicted_prs = [
             pr for pr in repo.get_pulls(state="open")
             if pr.mergeable_state == "dirty"
         ]
-
-    for pr in prs:
-        print(f"⚙️ Attempting to resolve PR #{pr.number} ({pr.title})")
-        os.environ["PR_NUMBER"] = str(pr.number)
-        try:
-            resolve_pr_conflicts(repo, pr.number, openrouter_key)
-        except Exception as e:
-            print(f"❌ Failed to resolve PR #{pr.number}: {e}")
+        for pr in conflicted_prs:
+            print(f"🔧 Attempting to resolve PR #{pr.number}: {pr.title}")
+            try:
+                resolve_pr_conflicts(repo, pr.number, openrouter_key)
+            except Exception as e:
+                print(f"❌ Error resolving PR #{pr.number}: {e}")
