@@ -3,12 +3,6 @@ name: Auto Resolve Merge Conflicts with AI
 on:
   issue_comment:
     types: [created]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'PR number to resolve'
-        required: false
-        type: number
 
 permissions:
   contents: write
@@ -24,6 +18,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.HEAD_REF }}
+          fetch-depth: 0
       - name: Install GitHub CLI
         run: sudo apt-get install gh -y
 
@@ -45,11 +44,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.HEAD_REF }}
-          fetch-depth: 0
+      
 
       - name: Set up Python
         uses: actions/setup-python@v5
