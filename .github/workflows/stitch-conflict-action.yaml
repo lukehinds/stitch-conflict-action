@@ -30,41 +30,55 @@ jobs:
           git checkout ${{ github.event.issue.pull_request.base.ref }}
         working-directory: ${{ github.workspace }}
 
-      - name: Attempt merge (will conflict)
+      - name: Attempt merge (may conflict)
         run: |
           cd repo
           git merge pr-branch || echo "::warning ::Merge conflicts detected"
         working-directory: ${{ github.workspace }}
 
-      - name: Find conflict files
+      - name: Detect conflict files
         id: conflict_files
         run: |
           cd repo
-          conflicts=$(git diff --name-only --diff-filter=U)
+          conflicts=$(git diff --name-only --diff-filter=U || true)
           echo "conflict_files=$conflicts" >> $GITHUB_OUTPUT
         working-directory: ${{ github.workspace }}
 
-      - name: Run AI conflict resolver (placeholder)
+      - name: Set up Python
+        if: steps.conflict_files.outputs.conflict_files != ''
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: steps.conflict_files.outputs.conflict_files != ''
+        run: pip install -e .
+        working-directory: ${{ github.workspace }}/repo
+
+      - name: Run AI conflict resolver
         if: steps.conflict_files.outputs.conflict_files != ''
         run: |
           cd repo
-          echo "🔧 AI would resolve these files:"
-          echo "${{ steps.conflict_files.outputs.conflict_files }}"
+          python resolve_conflicts/main.py
+        working-directory: ${{ github.workspace }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
 
-          # Simulate AI resolution by removing conflict markers
-          for file in ${{ steps.conflict_files.outputs.conflict_files }}; do
-            sed -i '/^<<<<<<< /d;/^=======$/d;/^>>>>>>> /d' "$file"
-          done
-
-          git add .
-          git commit -m "Auto-resolved merge conflicts via @fix-merge"
+      - name: Push resolved changes
+        if: steps.conflict_files.outputs.conflict_files != ''
+        run: |
+          cd repo
           git push origin HEAD:pr-branch
         working-directory: ${{ github.workspace }}
 
       - name: Comment on PR
+        if: steps.conflict_files.outputs.conflict_files != ''
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ✅ Merge conflicts were automatically resolved and pushed to the PR branch!
-            If anything looks off, just revert or let me know.
+            ✅ Conflicts were resolved with AI and pushed to the PR branch.
+            Triggered by `@fix-merge`. Let us know if anything looks off!
