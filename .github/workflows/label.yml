@@ -1,23 +1,15 @@
-name: "Maintenance"
+name: "Label Merge Conflicts"
 on:
-  # So that PRs touching the same files as the push are updated
-  push:
-  # So that the `dirtyLabel` is removed if conflicts are resolve
-  # We recommend `pull_request_target` so that github secrets are available.
-  # In `pull_request` we wouldn't be able to change labels of fork PRs
-  pull_request_target:
-    types: [synchronize]
-
+    push:
+      branches:
+        - master
 jobs:
-  main:
-    permissions: write-all
+  triage:
     runs-on: ubuntu-latest
     steps:
-      - name: check if prs are dirty
-        uses: eps1lon/actions-label-merge-conflict@v3
+      - uses: mschilde/auto-label-merge-conflicts@master
         with:
-          dirtyLabel: "PR: needs rebase"
-          removeOnDirtyLabel: "PR: ready to ship"
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          commentOnDirty: "This pull request has conflicts, please resolve those before we can evaluate the pull request."
-          commentOnClean: "Conflicts have been resolved. A maintainer will review the pull request shortly."
+          CONFLICT_LABEL_NAME: "has conflicts"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAX_RETRIES: 5
+          WAIT_MS: 5000
