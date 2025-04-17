@@ -93,9 +93,10 @@ def create_pull_request(repo_path, test_name):
 def setup(args):
     repo_path = Path(args.path).resolve()
     print(f"🔍 Using repo path: {repo_path}")
+
+    # ✅ Use default or generated name
     test_name = args.case or random_case_name()
     print(f"🎯 Using test case: {test_name}")
-
 
     if not args.existing:
         if repo_path.exists():
@@ -112,18 +113,19 @@ def setup(args):
     change_a = """def add(a, b):\n    print(f"Adding {a} and {b}")\n    return a + b\n\ndef subtract(a, b):\n    return a - b"""
     change_b = """def add(a, b):\n    return a + b\n\ndef subtract(a, b):\n    print(f"Subtracting {b} from {a}")\n    return a - b"""
 
-    create_conflicting_branches(repo_path, args.case, base_code, change_a, change_b)
+    create_conflicting_branches(repo_path, test_name, base_code, change_a, change_b)
 
     if args.push:
-        push_branches(repo_path, args.case)
+        push_branches(repo_path, test_name)
 
     if args.auto_merge:
-        auto_merge_branch1(repo_path, args.case)
+        auto_merge_branch1(repo_path, test_name)
 
     if args.create_pr:
-        create_pull_request(repo_path, args.case)
+        create_pull_request(repo_path, test_name)
 
     print("\n✅ Test case ready.")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Test harness for merge conflict cases")
