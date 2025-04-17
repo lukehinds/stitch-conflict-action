@@ -1,22 +1,35 @@
-on: issue_comment
-name: Issue Comments
-permissions:
-  issues: write
-  pull_requests: write
+# .github/workflows/count-lines.yml
+name: Count Lines on PR Comment
+
+on:
+  issue_comment:
+    types: [created]
+
 jobs:
-  check_comments:
-    name: Check comments for /test
+  count-lines:
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '@count-lines')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
     steps:
-      - name: Check for Command
-        id: command
-        uses: xt0rted/slash-command-action@v1
+      - name: Checkout PR code
+        uses: actions/checkout@v4
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          command: test
-          reaction: "true"
-          reaction-type: "eyes"
-          allow-edits: "false"
-          permission-level: admin
-      - name: Act on the command
-        run: echo "The command was '${{ steps.command.outputs.command-name }}' with arguments '${{ steps.command.outputs.command-arguments }}'"
+          ref: refs/pull/${{ github.event.issue.number }}/merge
+
+      - name: Count lines of code
+        id: count
+        run: |
+          COUNT=$(find . -name '*.py' -type f | xargs wc -l | tail -n1 | awk '{print $1}')
+          echo "lines=$COUNT" >> $GITHUB_OUTPUT
+
+      - name: Comment back on PR
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            🧮 Line count for this PR: **${{ steps.count.outputs.lines }}** lines across all `.py` files.
