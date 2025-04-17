@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:alpine
 
 WORKDIR /app
 
@@ -7,4 +7,4 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-ENTRYPOINT ["python", "resolve_conflicts/main.py"]
+ENTRYPOINT ["python", "stitch-conflict-action/main.py"]
