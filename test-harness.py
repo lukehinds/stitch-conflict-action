@@ -109,9 +109,14 @@ def setup(args):
             raise Exception("🚫 Path does not appear to be a Git repository.")
 
     # Code variants
-    base_code = """def add(a, b):\n    return a + b\n\ndef subtract(a, b):\n    return a - b"""
-    change_a = """def add(a, b):\n    print(f"Adding {a} and {b}")\n    return a + b\n\ndef subtract(a, b):\n    return a - b"""
-    change_b = """def add(a, b):\n    return a + b\n\ndef subtract(a, b):\n    print(f"Subtracting {b} from {a}")\n    return a - b"""
+# Shared base for both branches
+    base_code = """def add(a, b):\n    return a + b"""
+
+    # This is branch1's change
+    change_a = """def add(a, b):\n    print(f"Adding {a} and {b}")\n    return a + b"""
+
+    # This is branch2's change — conflicts with branch1!
+    change_b = """def add(a, b):\n    print(f"Result is: {a + b}")\n    return a + b"""
 
     create_conflicting_branches(repo_path, test_name, base_code, change_a, change_b)
 
