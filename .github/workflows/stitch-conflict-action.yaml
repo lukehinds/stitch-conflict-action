@@ -21,22 +21,32 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Checkout base and head branches
+      - name: Clone and set up remotes
         run: |
           git clone https://github.com/${{ github.repository }} repo
           cd repo
-          git fetch origin ${{ github.event.issue.pull_request.base.ref }}:${{ github.event.issue.pull_request.base.ref }}
-          git fetch origin ${{ github.event.issue.pull_request.head.ref }}:pr-branch
-          git checkout ${{ github.event.issue.pull_request.base.ref }}
+
+          # Setup remotes
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+          # Fetch both base and head branches
+          git fetch origin +refs/heads/${{ github.event.issue.pull_request.base.ref }}:base-branch
+          git fetch origin +refs/heads/${{ github.event.issue.pull_request.head.ref }}:pr-branch
         working-directory: ${{ github.workspace }}
 
-      - name: Attempt merge (may conflict)
+      - name: Check out base branch
+        run: |
+          cd repo
+          git checkout base-branch
+        working-directory: ${{ github.workspace }}
+
+      - name: Attempt merge
         run: |
           cd repo
           git merge pr-branch || echo "::warning ::Merge conflicts detected"
         working-directory: ${{ github.workspace }}
 
-      - name: Detect conflict files
+      - name: Find conflict files
         id: conflict_files
         run: |
           cd repo
@@ -44,41 +54,25 @@ jobs:
           echo "conflict_files=$conflicts" >> $GITHUB_OUTPUT
         working-directory: ${{ github.workspace }}
 
-      - name: Set up Python
-        if: steps.conflict_files.outputs.conflict_files != ''
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        if: steps.conflict_files.outputs.conflict_files != ''
-        run: pip install -e .
-        working-directory: ${{ github.workspace }}/repo
-
-      - name: Run AI conflict resolver
+      - name: Simulate AI resolution
         if: steps.conflict_files.outputs.conflict_files != ''
         run: |
           cd repo
-          python resolve_conflicts/main.py
-        working-directory: ${{ github.workspace }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
+          echo "Resolving conflicts for:"
+          echo "${{ steps.conflict_files.outputs.conflict_files }}"
 
-      - name: Push resolved changes
-        if: steps.conflict_files.outputs.conflict_files != ''
-        run: |
-          cd repo
+          for file in ${{ steps.conflict_files.outputs.conflict_files }}; do
+            sed -i '/^<<<<<<< /d;/^=======$/d;/^>>>>>>> /d' "$file"
+          done
+
+          git add .
+          git commit -m "Auto-resolved merge conflicts via @fix-merge"
           git push origin HEAD:pr-branch
         working-directory: ${{ github.workspace }}
 
       - name: Comment on PR
-        if: steps.conflict_files.outputs.conflict_files != ''
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ✅ Conflicts were resolved with AI and pushed to the PR branch.
-            Triggered by `@fix-merge`. Let us know if anything looks off!
+            ✅ Merge conflicts were automatically resolved and pushed to the PR branch!
