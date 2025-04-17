@@ -1,8 +1,11 @@
 name: "Label Merge Conflicts"
 on:
+    workflow_dispatch:
     push:
       branches:
-        - master
+        - main
+    schedule:
+      - cron: '0 * * * *' # Every hour
 jobs:
   triage:
     runs-on: ubuntu-latest
