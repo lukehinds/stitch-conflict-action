@@ -1,13 +1,15 @@
 name: "Label Merge Conflicts"
 on:
-    workflow_dispatch:
-    push:
-      branches:
-        - main
-    schedule:
-      - cron: '0 * * * *' # Every hour
+  workflow_dispatch:
+  push:
+    branches:
+     - main
+  schedule:
+    - cron: '0 * * * *' # Every hour
+
 jobs:
   triage:
+    permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: mschilde/auto-label-merge-conflicts@master
