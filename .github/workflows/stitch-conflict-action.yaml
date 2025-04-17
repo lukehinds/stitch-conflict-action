@@ -1,26 +1,23 @@
 name: Auto Resolve Merge Conflicts with AI
 
 on:
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'PR number to resolve'
-        required: false
-        type: number
-
-  schedule:
-    - cron: '0 * * * *'
+  pull_request:
+    types:
+      - labeled
 
 jobs:
   auto-resolve-conflicts:
-    permissions: write-all
+    if: github.event.label.name == 'stitch fix conflicts'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - name: Checkout repo
+      - name: Checkout PR
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
-          fetch-tags: false
           persist-credentials: true
 
       - name: Set up Python
@@ -33,11 +30,11 @@ jobs:
 
       - name: Debug Info
         run: |
-          echo "Manual PR input: ${{ inputs.pr_number }}"
+          echo "Running for PR #${{ github.event.pull_request.number }}"
 
-      - name: Run resolver
+      - name: Run AI Conflict Resolver
         run: python resolve_conflicts/main.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          PR_NUMBER: ${{ inputs.pr_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
