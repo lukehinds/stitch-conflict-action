@@ -7,6 +7,18 @@ def run_shell(cmd):
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     return result.stdout.strip()
 
+def fetch_and_merge_main():
+    # Ensure we can detect merge conflicts
+    run_shell(["git", "fetch", "origin", "main"])
+    try:
+        run_shell(["git", "merge", "origin/main"])
+    except subprocess.CalledProcessError:
+        # This is *expected* when there are conflicts
+        print("❗ Merge conflict detected during `git merge origin/main`")
+        return True
+    return False
+
+
 def manage_conflict_label(repo, pr_number, add=True):
     label_name = "merge-conflict"
     pr = repo.get_pull(pr_number)
@@ -27,7 +39,15 @@ def main():
     g = Github(github_token)
     repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
 
-    # Detect merge conflict files
+    # 🧪 Attempt to merge origin/main into this branch
+    print("🔁 Attempting to merge origin/main to trigger potential conflicts...")
+    run_shell(["git", "fetch", "origin", "main"])
+    try:
+        run_shell(["git", "merge", "--no-commit", "--no-ff", "origin/main"])
+    except subprocess.CalledProcessError:
+        print("⚠️ Merge produced conflicts. Proceeding to resolve...")
+
+    # 🧠 Detect unresolved conflicts
     conflicted = run_shell(["git", "diff", "--name-only", "--diff-filter=U"]).splitlines()
 
     if not conflicted:
@@ -52,6 +72,7 @@ def main():
 
     # Clean up label
     manage_conflict_label(repo, pr_number, add=False)
+
 
 if __name__ == "__main__":
     main()
