@@ -2,8 +2,7 @@ name: Auto Resolve Merge Conflicts with AI
 
 on:
   pull_request:
-    types:
-      - labeled
+    types: [ labeled ]
 
   workflow_dispatch:
     inputs:
@@ -14,9 +13,7 @@ on:
 
 jobs:
   auto-resolve-conflicts:
-    if: |
-      (github.event_name == 'pull_request' && github.event.label.name == 'stitch fix conflicts') ||
-      (github.event_name == 'workflow_dispatch')
+    if: ${{ github.event.label.name == 'stitch fix conflicts' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
