@@ -1,62 +1,21 @@
-name: Auto Resolve Merge Conflicts with AI
-
-on:
-  issue_comment:
-    types: [created]
-
+on: issue_comment
+name: Issue Comments
 permissions:
-  contents: write
-  pull-requests: write
   issues: write
-
 jobs:
-  auto-resolve-conflicts:
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/stitch-fix'))
-
+  check_comments:
+    name: Check comments for /test
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
+      - name: Check for Command
+        id: command
+        uses: xt0rted/slash-command-action@v1
         with:
-          ref: ${{ env.HEAD_REF }}
-          fetch-depth: 0
-      - name: Install GitHub CLI
-        run: sudo apt-get install gh -y
-
-      - name: Fetch PR info
-        id: pr
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "PR_NUMBER=${{ github.event.inputs.pr_number }}" >> $GITHUB_ENV
-          else
-            echo "PR_NUMBER=${{ github.event.issue.number }}" >> $GITHUB_ENV
-          fi
-
-          PR_DATA=$(gh pr view $PR_NUMBER --json headRefName,baseRefName --repo "$GITHUB_REPOSITORY")
-          HEAD_REF=$(echo "$PR_DATA" | jq -r '.headRefName')
-          BASE_REF=$(echo "$PR_DATA" | jq -r '.baseRefName')
-
-          echo "HEAD_REF=$HEAD_REF" >> $GITHUB_ENV
-          echo "BASE_REF=$BASE_REF" >> $GITHUB_ENV
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install -e .
-
-      - name: Run AI Conflict Resolver
-        run: python resolve_conflicts/main.py
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          PR_NUMBER: ${{ env.PR_NUMBER }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          command: test
+          reaction: "true"
+          reaction-type: "eyes"
+          allow-edits: "false"
+          permission-level: admin
+      - name: Act on the command
+        run: echo "The command was '${{ steps.command.outputs.command-name }}' with arguments '${{ steps.command.outputs.command-arguments }}'"
