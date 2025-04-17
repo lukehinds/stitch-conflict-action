@@ -40,18 +40,20 @@ def main():
     repo = g.get_repo(os.getenv("GITHUB_REPOSITORY"))
 
     # 🧪 Attempt to merge origin/main into this branch
-    print("🔁 Attempting to merge origin/main to trigger potential conflicts...")
+    # Simulate what GitHub does: try merging origin/main
+    print("🔁 Merging origin/main into PR branch to check for conflicts...")
     run_shell(["git", "fetch", "origin", "main"])
     try:
         run_shell(["git", "merge", "--no-commit", "--no-ff", "origin/main"])
     except subprocess.CalledProcessError:
-        print("⚠️ Merge produced conflicts. Proceeding to resolve...")
+        print("⚠️ Merge failed due to conflicts (expected if conflicting).")
 
-    # 🧠 Detect unresolved conflicts
+    # Check for conflicted files
     conflicted = run_shell(["git", "diff", "--name-only", "--diff-filter=U"]).splitlines()
 
     if not conflicted:
         print("✅ No merge conflicts.")
+        run_shell(["git", "merge", "--abort"])
         manage_conflict_label(repo, pr_number, add=False)
         return
 
