@@ -1,6 +1,9 @@
 name: Auto Resolve Merge Conflicts with AI
 
 on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *' # Every hour
   pull_request:
     types:
       - labeled
