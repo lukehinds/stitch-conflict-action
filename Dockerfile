@@ -2,18 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install curl and required build tools
-RUN apt-get update && apt-get install -y curl build-essential && \
-    curl -LsSf https://astral.sh/uv/install.sh | bash
+# Install curl and any required tools
+RUN apt-get update && apt-get install -y curl build-essential
 
-# Add uv to PATH for all future layers
-ENV PATH="/root/.cargo/bin:$PATH"
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | bash
 
-# Copy project files
+# ✅ Add uv to PATH (correct directory is .local/bin)
+ENV PATH="/root/.local/bin:$PATH"
+
+# Copy your project
 COPY pyproject.toml .
 COPY resolve_conflicts/ ./resolve_conflicts
 
-# Install dependencies using uv from pyproject.toml
+# Install deps from pyproject.toml using uv
 RUN uv pip install .
 
 ENTRYPOINT ["python", "resolve_conflicts/main.py"]
