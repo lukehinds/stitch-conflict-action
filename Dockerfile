@@ -2,8 +2,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install curl and build tools
-RUN apt-get update && apt-get install -y curl build-essential
+# Install dependencies: curl, build tools, git
+RUN apt-get update && apt-get install -y curl build-essential git
 
 # Install uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | bash
