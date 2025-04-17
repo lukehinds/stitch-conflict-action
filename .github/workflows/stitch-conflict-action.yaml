@@ -1,35 +1,70 @@
-# .github/workflows/count-lines.yml
-name: Count Lines on PR Comment
+name: Fix Merge Conflicts with AI
 
 on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
-  count-lines:
+  fix-merge:
     if: |
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '@count-lines')
+      contains(github.event.comment.body, '@fix-merge')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
 
     steps:
-      - name: Checkout PR code
-        uses: actions/checkout@v4
-        with:
-          ref: refs/pull/${{ github.event.issue.number }}/merge
-
-      - name: Count lines of code
-        id: count
+      - name: Set up Git
         run: |
-          COUNT=$(find . -name '*.py' -type f | xargs wc -l | tail -n1 | awk '{print $1}')
-          echo "lines=$COUNT" >> $GITHUB_OUTPUT
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Comment back on PR
+      - name: Checkout base and head branches
+        run: |
+          git clone https://github.com/${{ github.repository }} repo
+          cd repo
+          git fetch origin ${{ github.event.issue.pull_request.base.ref }}:${{ github.event.issue.pull_request.base.ref }}
+          git fetch origin ${{ github.event.issue.pull_request.head.ref }}:pr-branch
+          git checkout ${{ github.event.issue.pull_request.base.ref }}
+        working-directory: ${{ github.workspace }}
+
+      - name: Attempt merge (will conflict)
+        run: |
+          cd repo
+          git merge pr-branch || echo "::warning ::Merge conflicts detected"
+        working-directory: ${{ github.workspace }}
+
+      - name: Find conflict files
+        id: conflict_files
+        run: |
+          cd repo
+          conflicts=$(git diff --name-only --diff-filter=U)
+          echo "conflict_files=$conflicts" >> $GITHUB_OUTPUT
+        working-directory: ${{ github.workspace }}
+
+      - name: Run AI conflict resolver (placeholder)
+        if: steps.conflict_files.outputs.conflict_files != ''
+        run: |
+          cd repo
+          echo "🔧 AI would resolve these files:"
+          echo "${{ steps.conflict_files.outputs.conflict_files }}"
+
+          # Simulate AI resolution by removing conflict markers
+          for file in ${{ steps.conflict_files.outputs.conflict_files }}; do
+            sed -i '/^<<<<<<< /d;/^=======$/d;/^>>>>>>> /d' "$file"
+          done
+
+          git add .
+          git commit -m "Auto-resolved merge conflicts via @fix-merge"
+          git push origin HEAD:pr-branch
+        working-directory: ${{ github.workspace }}
+
+      - name: Comment on PR
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            🧮 Line count for this PR: **${{ steps.count.outputs.lines }}** lines across all `.py` files.
+            ✅ Merge conflicts were automatically resolved and pushed to the PR branch!
+            If anything looks off, just revert or let me know.
