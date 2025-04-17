@@ -1,27 +1,31 @@
 name: Auto Resolve Merge Conflicts with AI
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: '0 * * * *' # Every hour
   pull_request:
     types:
       - labeled
 
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to resolve'
+        required: false
+        type: number
+
 jobs:
   auto-resolve-conflicts:
-    if: github.event.label.name == 'stitch fix conflicts'
+    if: |
+      (github.event_name == 'pull_request' && github.event.label.name == 'stitch fix conflicts') ||
+      (github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - name: Checkout PR
+      - name: Checkout repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,13 +35,18 @@ jobs:
       - name: Install dependencies
         run: pip install -e .
 
-      - name: Debug Info
+      - name: Determine PR Number
+        id: get-pr
         run: |
-          echo "Running for PR #${{ github.event.pull_request.number }}"
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "pr=${{ github.event.inputs.pr_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "pr=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Run AI Conflict Resolver
         run: python resolve_conflicts/main.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ steps.get-pr.outputs.pr }}
