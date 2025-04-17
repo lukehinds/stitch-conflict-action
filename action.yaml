@@ -1,0 +1,5 @@
+name: "Auto Resolve Merge Conflicts"
+description: "Detects and resolves merge conflicts using AI"
+runs:
+  using: "docker"
+  image: "Dockerfile"
