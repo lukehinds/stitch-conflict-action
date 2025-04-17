@@ -13,6 +13,8 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
+          fetch-tags: false
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -21,6 +23,12 @@ jobs:
 
       - name: Install dependencies
         run: pip install -e .
+
+      - name: Debug Info
+        run: |
+          echo "Base: ${{ github.base_ref }}"
+          echo "Head: ${{ github.head_ref }}"
+          echo "PR: ${{ github.event.pull_request.number }}"
 
       - name: Run resolver
         run: python resolve_conflicts/main.py
