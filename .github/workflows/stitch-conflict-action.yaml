@@ -20,6 +20,15 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+      - name: Clone and set up remotes
+        run: |
+          git clone https://github.com/${{ github.repository }} repo
+          cd repo
+
+          # Setup remotes
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+        working-directory: ${{ github.workspace }}
+
       - name: Get PR info
         id: pr_info
         env:
@@ -31,15 +40,11 @@ jobs:
           head_ref=$(echo "$refs" | cut -d',' -f2)
           echo "base_ref=$base_ref" >> $GITHUB_OUTPUT
           echo "head_ref=$head_ref" >> $GITHUB_OUTPUT
+        working-directory: ${{ github.workspace }}/repo
 
-      - name: Clone and set up remotes
+      - name: Fetch branches
         run: |
-          git clone https://github.com/${{ github.repository }} repo
           cd repo
-
-          # Setup remotes
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-
           # Fetch both base and head branches using refs from gh
           git fetch origin +refs/heads/${{ steps.pr_info.outputs.base_ref }}:base-branch
           git fetch origin +refs/heads/${{ steps.pr_info.outputs.head_ref }}:pr-branch
