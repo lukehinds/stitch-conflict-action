@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+# var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+stitch.yml
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Logs
+*.log
+logs/
+log/
+
+# Local development
+.env.local
+.env.*.local
+*.db
+*.sqlite3
+
+# Project specific
+stitch/generated/
+.stitch_cache/ 
+tests/mcp-server/sse/node_modules/
+tests/mcp-server/stdio/node_modules/
+mcp-config.yml
+mcp-config.json
