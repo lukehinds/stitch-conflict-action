@@ -11,8 +11,7 @@ permissions:
 jobs:
   fix-merge:
     if: |
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '@fix-merge')
+      github.event.issue.pull_request && contains(github.event.comment.body, '@fix-merge')
     runs-on: ubuntu-latest
 
     steps:
