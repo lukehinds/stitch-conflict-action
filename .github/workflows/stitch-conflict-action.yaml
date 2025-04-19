@@ -11,8 +11,7 @@ permissions:
 jobs:
   fix-merge:
     if: |
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '@fix-merge')
+      github.event.issue.pull_request && contains(github.event.comment.body, '@fix-merge')
     runs-on: ubuntu-latest
 
     steps:
@@ -20,6 +19,18 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get PR info
+        id: pr_info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          refs=$(gh pr view $PR_NUMBER --json baseRefName,headRefName -q '.baseRefName + "," + .headRefName')
+          base_ref=$(echo "$refs" | cut -d',' -f1)
+          head_ref=$(echo "$refs" | cut -d',' -f2)
+          echo "base_ref=$base_ref" >> $GITHUB_OUTPUT
+          echo "head_ref=$head_ref" >> $GITHUB_OUTPUT
 
       - name: Clone and set up remotes
         run: |
@@ -29,9 +40,9 @@ jobs:
           # Setup remotes
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
-          # Fetch both base and head branches
-          git fetch origin +refs/heads/${{ github.event.issue.pull_request.base.ref }}:base-branch
-          git fetch origin +refs/heads/${{ github.event.issue.pull_request.head.ref }}:pr-branch
+          # Fetch both base and head branches using refs from gh
+          git fetch origin +refs/heads/${{ steps.pr_info.outputs.base_ref }}:base-branch
+          git fetch origin +refs/heads/${{ steps.pr_info.outputs.head_ref }}:pr-branch
         working-directory: ${{ github.workspace }}
 
       - name: Check out base branch
