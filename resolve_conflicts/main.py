@@ -32,6 +32,51 @@ def manage_conflict_label(repo, pr_number, add=True):
         print(f"✅ Removed label `{label_name}`")
 
 
+def resolve_pr_conflicts(repo, pr_number, openrouter_key):
+    pr = repo.get_pull(pr_number)
+    head_branch = pr.head.ref
+    base_branch = pr.base.ref
+
+    print(f"Checking out PR branch: {head_branch}")
+    run_shell(["git", "checkout", head_branch])
+    run_shell(["git", "pull", "origin", head_branch]) # Ensure local branch is up-to-date
+
+    print(f"Fetching base branch: {base_branch}")
+    run_shell(["git", "fetch", "origin", base_branch])
+
+    print(f"Attempting merge of {base_branch} into {head_branch}")
+    try:
+        run_shell(["git", "merge", f"origin/{base_branch}"])
+        print("✅ No merge conflicts found.")
+        manage_conflict_label(repo, pr_number, add=False)
+        return # Success, no conflicts
+    except subprocess.CalledProcessError:
+        print("❗ Merge conflict detected.")
+        manage_conflict_label(repo, pr_number, add=True)
+
+    conflict_blocks = find_conflicts()
+    if not conflict_blocks:
+        print("🤔 No conflict markers found despite merge failure. Manual check needed.")
+        # Consider aborting the merge here if needed
+        # run_shell(["git", "merge", "--abort"])
+        return
+
+    print("🤖 Sending conflicts to AI for resolution...")
+    ai_suggestion = send_to_ai(conflict_blocks, openrouter_key)
+
+    print("Applying AI suggestions...")
+    apply_fixes(ai_suggestion)
+
+    print("Committing resolved files...")
+    run_shell(["git", "add", "."]) # Stage all resolved files
+    run_shell(["git", "commit", "-m", f'Auto-resolve conflicts for PR #{pr_number}'])
+
+    print(f"Pushing resolved branch {head_branch}...")
+    run_shell(["git", "push", "origin", head_branch])
+    manage_conflict_label(repo, pr_number, add=False)
+    print(f"✅ Successfully resolved conflicts and pushed to {head_branch}.")
+
+
 def main():
     github_token = os.getenv("GITHUB_TOKEN")
     openrouter_key = os.getenv("OPENROUTER_API_KEY")
