@@ -78,7 +78,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           cd repo
-          pip install -r resolve_conflicts/requirements.txt # Or adjust path if requirements.txt is elsewhere
+          pip install -r requirements.txt
         working-directory: ${{ github.workspace }}
 
       - name: Resolve Conflicts with AI Script
