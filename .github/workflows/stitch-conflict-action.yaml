@@ -94,7 +94,7 @@ jobs:
           # Stage, commit, and push the resolved files
           git add .
           git commit -m "Auto-resolved merge conflicts via @fix-merge"
-          git push origin HEAD:pr-branch
+          git push --force origin HEAD:pr-branch
         working-directory: ${{ github.workspace }}
 
       - name: Comment on PR
