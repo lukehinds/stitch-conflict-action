@@ -83,6 +83,8 @@ jobs:
 
       - name: Resolve Conflicts with AI Script
         if: steps.conflict_files.outputs.conflict_files != ''
+        env:
+          PYTHONPATH: ${{ github.workspace }}/repo
         run: |
           cd repo
           echo "Resolving conflicts for:"
