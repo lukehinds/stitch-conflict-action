@@ -85,6 +85,10 @@ jobs:
         if: steps.conflict_files.outputs.conflict_files != ''
         env:
           PYTHONPATH: ${{ github.workspace }}/repo
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }} # Make sure this secret is configured in your repository
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
         run: |
           cd repo
           echo "Resolving conflicts for:"
