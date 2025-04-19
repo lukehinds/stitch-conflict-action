@@ -74,6 +74,10 @@ def main():
     pr_number_str = os.getenv("PR_NUMBER")
     repo_name = os.getenv("GITHUB_REPOSITORY")
 
+    # Strip whitespace from PR number string if it exists
+    if pr_number_str:
+        pr_number_str = pr_number_str.strip()
+
     if not github_token or not openrouter_key or not repo_name:
         print("❌ Missing required environment variables (GITHUB_TOKEN, OPENROUTER_API_KEY, GITHUB_REPOSITORY)")
         sys.exit(1)
@@ -87,11 +91,12 @@ def main():
     if conflict_files_from_args:
         # Workflow passed specific files via @fix-merge
         print(f"🔧 Resolving specific files passed as arguments: {conflict_files_from_args}")
+        # Check pr_number_str again after stripping
         if not pr_number_str:
-            print("❌ PR_NUMBER environment variable is required when files are passed via arguments.")
+            print("❌ PR_NUMBER environment variable is required and non-empty when files are passed via arguments.")
             sys.exit(1)
         try:
-            pr_number = int(pr_number_str)
+            pr_number = int(pr_number_str) # Use stripped value
             # Pass the list of conflict files to the resolver function
             resolve_pr_conflicts(repo, pr_number, openrouter_key, conflict_files_from_args)
         except ValueError:
@@ -103,14 +108,14 @@ def main():
             sys.exit(1)
 
     elif pr_number_str:
-        # If only PR_NUMBER is set, we need files to resolve.
-        # This mode is less applicable to the @fix-merge trigger.
+        # Handle case where only PR_NUMBER is set (e.g., manual trigger, future use)
+        # Check pr_number_str again after stripping
         print(f"🔧 Resolving conflicts for specific PR #{pr_number_str} based on environment variable.")
         print("⚠️ Warning: No specific conflict files provided. This mode might require changes.")
         # You might need to manually run git merge here or adjust logic
         # For now, we'll assume this path isn't hit by the current workflow
         # try:
-        #     pr_number = int(pr_number_str)
+        #     pr_number = int(pr_number_str) # Use stripped value
         #     # Placeholder: Need to define how conflicts are identified here
         #     # resolve_pr_conflicts(repo, pr_number, openrouter_key, [])
         # except ValueError:
