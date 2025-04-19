@@ -70,17 +70,20 @@ jobs:
           echo "conflict_files=$conflicts" >> $GITHUB_OUTPUT
         working-directory: ${{ github.workspace }}
 
-      - name: Simulate AI resolution
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x' # Or specify your desired Python version
+
+      - name: Resolve Conflicts with AI Script
         if: steps.conflict_files.outputs.conflict_files != ''
         run: |
           cd repo
           echo "Resolving conflicts for:"
           echo "${{ steps.conflict_files.outputs.conflict_files }}"
+          python resolve_conflicts/main.py ${{ steps.conflict_files.outputs.conflict_files }}
 
-          for file in ${{ steps.conflict_files.outputs.conflict_files }}; do
-            sed -i '/^<<<<<<< /d;/^=======$/d;/^>>>>>>> /d' "$file"
-          done
-
+          # Stage, commit, and push the resolved files
           git add .
           git commit -m "Auto-resolved merge conflicts via @fix-merge"
           git push origin HEAD:pr-branch
