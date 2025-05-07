@@ -1,109 +1,16 @@
 name: Fix Merge Conflicts with AI
 
 on:
-  issue_comment:
-    types: [created]
-
-permissions:
-  contents: write
-  pull-requests: write
+  push:                      # Trigger on every push
+  schedule:                  # Trigger every 4 hours (UTC)
+    - cron: '0 */4 * * *'
+  workflow_dispatch:         # Manual trigger via GitHub Actions UI
 
 jobs:
-  fix-merge:
-    if: |
-      github.event.issue.pull_request && contains(github.event.comment.body, '@fix-merge')
+  merge_conflict_job:
     runs-on: ubuntu-latest
-
+    name: Find merge conflicts
     steps:
-      - name: Set up Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Clone and set up remotes
-        run: |
-          git clone https://github.com/${{ github.repository }} repo
-          cd repo
-
-          # Setup remotes
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-        working-directory: ${{ github.workspace }}
-
-      - name: Get PR info
-        id: pr_info
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          refs=$(gh pr view $PR_NUMBER --json baseRefName,headRefName -q '.baseRefName + "," + .headRefName')
-          base_ref=$(echo "$refs" | cut -d',' -f1)
-          head_ref=$(echo "$refs" | cut -d',' -f2)
-          echo "base_ref=$base_ref" >> $GITHUB_OUTPUT
-          echo "head_ref=$head_ref" >> $GITHUB_OUTPUT
-        working-directory: ${{ github.workspace }}/repo
-
-      - name: Fetch branches
-        run: |
-          cd repo
-          # Fetch both base and head branches using refs from gh
-          git fetch origin +refs/heads/${{ steps.pr_info.outputs.base_ref }}:base-branch
-          git fetch origin +refs/heads/${{ steps.pr_info.outputs.head_ref }}:pr-branch
-        working-directory: ${{ github.workspace }}
-
-      - name: Check out base branch
-        run: |
-          cd repo
-          git checkout base-branch
-        working-directory: ${{ github.workspace }}
-
-      - name: Attempt merge
-        run: |
-          cd repo
-          git merge pr-branch || echo "::warning ::Merge conflicts detected"
-        working-directory: ${{ github.workspace }}
-
-      - name: Find conflict files
-        id: conflict_files
-        run: |
-          cd repo
-          conflicts=$(git diff --name-only --diff-filter=U || true)
-          echo "conflict_files=$conflicts" >> $GITHUB_OUTPUT
-        working-directory: ${{ github.workspace }}
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x' # Or specify your desired Python version
-
-      - name: Install Python dependencies
-        run: |
-          cd repo
-          pip install -r requirements.txt
-        working-directory: ${{ github.workspace }}
-
-      - name: Resolve Conflicts with AI Script
-        if: steps.conflict_files.outputs.conflict_files != ''
-        env:
-          PYTHONPATH: ${{ github.workspace }}/repo
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }} # Make sure this secret is configured in your repository
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.issue.number }}
-        run: |
-          cd repo
-          echo "Resolving conflicts for:"
-          echo "${{ steps.conflict_files.outputs.conflict_files }}"
-          python resolve_conflicts/main.py ${{ steps.conflict_files.outputs.conflict_files }}
-
-          # Stage, commit, and push the resolved files
-          git add .
-          git commit -m "Auto-resolved merge conflicts via @fix-merge"
-          git push --force origin HEAD:pr-branch
-        working-directory: ${{ github.workspace }}
-
-      - name: Comment on PR
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.issue.number }}
-          body: |
-            ✅ Merge conflicts were automatically resolved and pushed to the PR branch!
+      - uses: actions/checkout@v2
+      - name: Merge Conflict finder
+        uses: olivernybroe/action-conflict-finder@v4.0
