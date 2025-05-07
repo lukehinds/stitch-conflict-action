@@ -27,8 +27,11 @@ def run(cmd, cwd=None, check=True):
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, shell=True)
     if result.returncode != 0 and check:
         print(f"❌ Command failed: {cmd}")
-        print(result.stderr)
-        raise RuntimeError(result.stderr)
+        error_message = result.stderr.strip()
+        if not error_message:  # If stderr is empty
+            error_message = result.stdout.strip()  # Use stdout
+        print(error_message) # Print whatever message we got
+        raise RuntimeError(error_message) # Raise with that message
     return result.stdout.strip()
 
 def write_file(path, content):
