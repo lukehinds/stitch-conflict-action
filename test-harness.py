@@ -23,15 +23,21 @@ def random_case_name():
     return f"{random.choice(ADJECTIVES)}{random.choice(NOUNS)}"
 
 
-def run(cmd, cwd=None, check=True):
+def run(cmd, cwd=None, check=True, allow_empty_commit=False):
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, shell=True)
     if result.returncode != 0 and check:
-        print(f"❌ Command failed: {cmd}")
         error_message = result.stderr.strip()
         if not error_message:  # If stderr is empty
             error_message = result.stdout.strip()  # Use stdout
-        print(error_message) # Print whatever message we got
-        raise RuntimeError(error_message) # Raise with that message
+
+        if allow_empty_commit and "git commit" in cmd and ("nothing to commit" in error_message or "no changes added to commit" in error_message):
+            print(f"ℹ️ Command '{cmd}' resulted in no changes, but proceeding as allowed.")
+            print(error_message) # Print the message for informational purposes
+            return result.stdout.strip() # Return stdout as usual
+        else:
+            print(f"❌ Command failed: {cmd}")
+            print(error_message) # Print whatever message we got
+            raise RuntimeError(error_message) # Raise with that message
     return result.stdout.strip()
 
 def write_file(path, content):
@@ -54,7 +60,7 @@ def create_conflicting_branches(repo_path, test_name, base_code, branch1_code, b
     # Write base file
     write_file(file_path, base_code)
     run("git add .", cwd=repo_path)
-    run(f"git commit -m 'Base commit for {test_name}'", cwd=repo_path)
+    run(f"git commit -m 'Base commit for {test_name}'", cwd=repo_path, allow_empty_commit=True)
 
     # Create branch 1 and modify
     run(f"git checkout -b {test_name}_branch1", cwd=repo_path)
